@@ -4,8 +4,50 @@
 
 :root {
   color-scheme: light;
+  --font-display: "Fraunces", serif;
+  --font-body: "Space Grotesk", sans-serif;
+  --app-bg: #f8f6f1;
+  --app-surface: #ffffff;
+  --app-ink: #1f1e19;
+  --app-muted: #5f5a52;
+  --app-accent: #e58b59;
+  --app-accent-strong: #ce5b2a;
+  --app-border: rgba(31, 30, 25, 0.12);
+  --app-ring: rgba(206, 91, 42, 0.28);
 }
 
 body {
   margin: 0;
+  font-family: var(--font-body);
+  background: var(--app-bg);
+  color: var(--app-ink);
+}
+
+@keyframes fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-rise {
+  animation: fade-rise 0.7s ease-out both;
+}
+
+.animate-fade-rise-delay {
+  animation: fade-rise 0.7s ease-out 0.12s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-rise {
+    animation: none;
+  }
+
+  .animate-fade-rise-delay {
+    animation: none;
+  }
 }

@@ -33,6 +33,18 @@ Proyecto para comparar y entender propuestas de candidaturas en procesos de elec
 
 ## Variables de entorno
 - Copiar `frontend/.env.example` a `frontend/.env` y ajustar `VITE_API_URL` cuando exista el backend.
+- Completar las llaves de Firebase Auth para el login de organizadores.
+
+Ejemplo:
+```bash
+VITE_API_URL=http://localhost:3000/api
+VITE_FIREBASE_API_KEY=tu_api_key
+VITE_FIREBASE_AUTH_DOMAIN=tu_proyecto.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=tu_proyecto
+VITE_FIREBASE_STORAGE_BUCKET=tu_proyecto.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=tu_sender_id
+VITE_FIREBASE_APP_ID=tu_app_id
+```
 
 ## Comandos basicos
 ```bash
@@ -40,6 +52,10 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Login organizadores
+- Ruta: `/organizers/login`.
+- Usa Firebase Authentication (correo/contrasena) con cuentas creadas previamente.
 
 ## Notas del dominio
 - La app debe permitir seleccionar procesos de eleccion, comparar candidaturas y revisar propuestas por tema.
