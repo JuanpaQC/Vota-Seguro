@@ -51,6 +51,16 @@ export async function deleteCandidate(id) {
     throw httpError(404, 'Candidate not found')
   }
 
+  const proposalsSnapshot = await db
+    .collection('proposals')
+    .where('candidateId', '==', id)
+    .get()
+  if (!proposalsSnapshot.empty) {
+    const batch = db.batch()
+    proposalsSnapshot.docs.forEach((doc) => batch.delete(doc.ref))
+    await batch.commit()
+  }
+
   await docRef.delete()
   return { id }
 }

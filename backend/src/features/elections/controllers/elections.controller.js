@@ -8,7 +8,16 @@ import {
 } from '../services/elections.service.js'
 
 export const listElectionsHandler = asyncHandler(async (req, res) => {
-  const elections = await listElections()
+  const isActiveQuery = req.query.isActive
+  const isActive =
+    typeof isActiveQuery === 'string'
+      ? isActiveQuery.toLowerCase() === 'true'
+        ? true
+        : isActiveQuery.toLowerCase() === 'false'
+          ? false
+          : undefined
+      : undefined
+  const elections = await listElections({ isActive })
   res.json(elections)
 })
 
