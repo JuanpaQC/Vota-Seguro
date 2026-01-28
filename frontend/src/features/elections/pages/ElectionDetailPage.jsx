@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { listCandidates } from '../../candidates/services/candidatesService.js'
 import { getElection } from '../services/electionsService.js'
-import { listProposals } from '../../proposals/services/proposalsService.js'
+import CandidateCard from '../../candidates/components/CandidateCard.jsx'
 
 function ElectionDetailPage() {
   const { id } = useParams()
   const [election, setElection] = useState(null)
   const [candidates, setCandidates] = useState([])
-  const [proposals, setProposals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -19,16 +18,14 @@ function ElectionDetailPage() {
       setLoading(true)
       setError('')
       try {
-        const [electionData, candidatesData, proposalsData] = await Promise.all([
+        const [electionData, candidatesData] = await Promise.all([
           getElection(id),
           listCandidates({ electionId: id }),
-          listProposals({ electionId: id }),
         ])
 
         if (isMounted) {
           setElection(electionData)
           setCandidates(candidatesData)
-          setProposals(proposalsData)
         }
       } catch (err) {
         if (isMounted) {
@@ -46,15 +43,6 @@ function ElectionDetailPage() {
       isMounted = false
     }
   }, [id])
-
-  const proposalsByCandidate = useMemo(() => {
-    return proposals.reduce((acc, proposal) => {
-      const key = proposal.candidateId || 'unknown'
-      if (!acc[key]) acc[key] = []
-      acc[key].push(proposal)
-      return acc
-    }, {})
-  }, [proposals])
 
   if (loading) {
     return (
@@ -134,143 +122,16 @@ function ElectionDetailPage() {
             Candidaturas registradas
           </h2>
           <p className="text-sm text-[var(--app-muted)]">
-            Informacion oficial de cada candidato, sus propuestas y plan de gobierno.
+            Haz clic en cualquier candidato para ver su perfil completo con biografia, plan de
+            gobierno y propuestas.
           </p>
         </div>
 
         {candidates.length ? (
-          <div className="grid gap-5 lg:grid-cols-2">
-            {candidates.map((candidate) => {
-              const candidateProposals = proposalsByCandidate[candidate.id] || []
-              return (
-                <article
-                  key={candidate.id}
-                  className="rounded-3xl border border-[color:var(--app-border)] bg-white/80 p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]"
-                >
-                  <div className="flex flex-wrap gap-4">
-                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-[color:var(--app-border)] bg-[var(--app-bg)]">
-                      {candidate.photoUrl ? (
-                        <img
-                          src={candidate.photoUrl}
-                          alt={candidate.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-[var(--app-muted)]">
-                          Sin foto
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-[var(--app-ink)]">
-                        {candidate.name}
-                      </h3>
-                      <p className="mt-1 text-sm text-[var(--app-muted)]">
-                        {[candidate.party, candidate.origin, candidate.age]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                      {candidate.education ? (
-                        <p className="mt-2 text-sm text-[var(--app-muted)]">
-                          {candidate.education}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {candidate.bio ? (
-                    <p className="mt-4 text-sm text-[var(--app-muted)]">
-                      {candidate.bio}
-                    </p>
-                  ) : null}
-
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-[var(--app-muted)]">
-                    {candidate.websiteUrl ? (
-                      <a
-                        href={candidate.websiteUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-[color:var(--app-border)] px-3 py-1 text-[var(--app-accent-strong)]"
-                      >
-                        Sitio oficial
-                      </a>
-                    ) : null}
-                  </div>
-
-                  {candidate.governmentPlan?.title ||
-                  candidate.governmentPlan?.summary ||
-                  candidate.governmentPlan?.url ? (
-                    <div className="mt-5 rounded-2xl border border-dashed border-[color:var(--app-border)] bg-white/70 p-4">
-                      <h4 className="text-sm font-semibold text-[var(--app-ink)]">
-                        Plan de gobierno
-                      </h4>
-                      {candidate.governmentPlan.title ? (
-                        <p className="mt-2 text-sm font-semibold text-[var(--app-ink)]">
-                          {candidate.governmentPlan.title}
-                        </p>
-                      ) : null}
-                      {candidate.governmentPlan.summary ? (
-                        <p className="mt-2 text-sm text-[var(--app-muted)]">
-                          {candidate.governmentPlan.summary}
-                        </p>
-                      ) : null}
-                      {candidate.governmentPlan.url ? (
-                        <a
-                          href={candidate.governmentPlan.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex text-xs font-semibold text-[var(--app-accent-strong)]"
-                        >
-                          Ver plan completo
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  <div className="mt-5">
-                    <h4 className="text-sm font-semibold text-[var(--app-ink)]">
-                      Propuestas destacadas
-                    </h4>
-                    {candidateProposals.length ? (
-                      <div className="mt-3 space-y-3">
-                        {candidateProposals.map((proposal) => (
-                          <div
-                            key={proposal.id}
-                            className="rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-4"
-                          >
-                            <p className="text-sm font-semibold text-[var(--app-ink)]">
-                              {proposal.title}
-                            </p>
-                            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[var(--app-muted)]">
-                              {proposal.topic}
-                            </p>
-                            {proposal.summary ? (
-                              <p className="mt-2 text-sm text-[var(--app-muted)]">
-                                {proposal.summary}
-                              </p>
-                            ) : null}
-                            {proposal.sourceUrl ? (
-                              <a
-                                href={proposal.sourceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex text-xs font-semibold text-[var(--app-accent-strong)]"
-                              >
-                                Ver fuente
-                              </a>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-2 text-sm text-[var(--app-muted)]">
-                        Sin propuestas registradas.
-                      </p>
-                    )}
-                  </div>
-                </article>
-              )
-            })}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {candidates.map((candidate) => (
+              <CandidateCard key={candidate.id} candidate={candidate} electionId={id} />
+            ))}
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-[color:var(--app-border)] bg-white/80 p-6 text-sm text-[var(--app-muted)]">
