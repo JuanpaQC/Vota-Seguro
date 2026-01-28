@@ -11,11 +11,17 @@ import OrganizerCandidateEditPage from '../features/admin/pages/OrganizerCandida
 import OrganizerProposalEditPage from '../features/admin/pages/OrganizerProposalEditPage.jsx'
 import OrganizerProtectedRoute from '../features/auth/routes/OrganizerProtectedRoute.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
+import ComparePage from '../features/comparison/pages/ComparePage.jsx'
+
 
 function AppRoutes() {
   return (
     <Routes>
       <Route element={<RootLayout />}>
+        <Route
+            path="elections/:electionId/compare"
+            element={<ComparePage />}
+        />
         <Route index element={<ElectionListPage />} />
         <Route
           path="elections/:electionId/candidates/:candidateId"
@@ -32,6 +38,7 @@ function AppRoutes() {
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route path="organizers/login" element={<OrganizerLoginPage />} />
+
     </Routes>
   )
 }
