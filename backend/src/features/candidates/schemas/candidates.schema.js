@@ -10,6 +10,7 @@ export const candidateCreateSchema = z.object({
   education: z.string().optional(),
   bio: z.string().optional(),
   websiteUrl: z.string().optional(),
+  ideology: z.string().optional(),
   governmentPlan: z
     .object({
       title: z.string().optional(),

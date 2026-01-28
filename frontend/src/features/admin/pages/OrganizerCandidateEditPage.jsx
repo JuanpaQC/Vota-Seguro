@@ -14,6 +14,7 @@ const emptyForm = {
   education: '',
   bio: '',
   websiteUrl: '',
+  ideology: '',
   governmentPlan: {
     title: '',
     summary: '',
@@ -51,6 +52,7 @@ function OrganizerCandidateEditPage() {
           education: data.education || '',
           bio: data.bio || '',
           websiteUrl: data.websiteUrl || '',
+          ideology: data.ideology || '',
           governmentPlan: {
             title: data.governmentPlan?.title || '',
             summary: data.governmentPlan?.summary || '',
@@ -116,6 +118,7 @@ function OrganizerCandidateEditPage() {
       education: form.education.trim() || undefined,
       bio: form.bio.trim() || undefined,
       websiteUrl: form.websiteUrl.trim() || undefined,
+      ideology: form.ideology.trim() || undefined,
       governmentPlan: hasGovernmentPlan ? governmentPlan : undefined,
     }
 
@@ -251,6 +254,16 @@ function OrganizerCandidateEditPage() {
                 rows="3"
                 value={form.bio}
                 onChange={(event) => updateField('bio', event.target.value)}
+                className="w-full rounded-2xl border border-[color:var(--app-border)] bg-white/70 px-4 py-3 text-sm shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
+              />
+            </label>
+            <label className="md:col-span-2 space-y-2 text-sm font-medium text-[var(--app-ink)]">
+              Ideologia
+              <textarea
+                rows="3"
+                value={form.ideology}
+                onChange={(event) => updateField('ideology', event.target.value)}
+                placeholder="Describe la ideologia politica del candidato..."
                 className="w-full rounded-2xl border border-[color:var(--app-border)] bg-white/70 px-4 py-3 text-sm shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
               />
             </label>

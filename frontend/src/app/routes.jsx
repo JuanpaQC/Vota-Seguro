@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import RootLayout from './layouts/RootLayout.jsx'
 import ElectionListPage from '../features/elections/pages/ElectionListPage.jsx'
 import ElectionDetailPage from '../features/elections/pages/ElectionDetailPage.jsx'
+import CandidateDetailPage from '../features/candidates/pages/CandidateDetailPage.jsx'
 import OrganizerLoginPage from '../features/auth/pages/OrganizerLoginPage.jsx'
 import OrganizerDashboardPage from '../features/auth/pages/OrganizerDashboardPage.jsx'
 import OrganizerElectionCreatePage from '../features/admin/pages/OrganizerElectionCreatePage.jsx'
@@ -16,6 +17,10 @@ function AppRoutes() {
     <Routes>
       <Route element={<RootLayout />}>
         <Route index element={<ElectionListPage />} />
+        <Route
+          path="elections/:electionId/candidates/:candidateId"
+          element={<CandidateDetailPage />}
+        />
         <Route path="elections/:id" element={<ElectionDetailPage />} />
         <Route path="organizers" element={<OrganizerProtectedRoute />}>
           <Route index element={<OrganizerDashboardPage />} />
