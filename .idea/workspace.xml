@@ -5,16 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="fc9e61d4-39d3-47ea-b592-9f6e3eab34c4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/src/features/comparison/comparison.controller.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/features/comparison/comparison.routes.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/features/comparison/comparison.service.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/features/topics/topics.controller.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/features/topics/topics.routes.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/features/topics/topics.service.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/config/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/firebase.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/routes/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/routes/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/features/elections/controllers/electionCandidatesSub.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/features/elections/controllers/elections.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/features/elections/controllers/elections.routes.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/features/proposals/controllers/compare.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/features/proposals/controllers/compare.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/comparison/pages/ComparePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/comparison/pages/ComparePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/services/comparison.service.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/services/comparison.service.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,9 +24,9 @@
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 2
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
   <component name="ProjectId" id="38qiJ4bKEoTxqd8oEZhunzySYzM" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -44,10 +40,10 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "master",
+    "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/diana/OneDrive/Documents/Vota'Seguro",
+    "last_opened_file_path": "C:/Users/diana/OneDrive/Documents/votaseguro",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -73,6 +69,7 @@
       <option name="presentableId" value="Default" />
       <updated>1769533427147</updated>
       <workItem from="1769533428181" duration="14356000" />
+      <workItem from="1769644106303" duration="5237000" />
     </task>
     <servers />
   </component>

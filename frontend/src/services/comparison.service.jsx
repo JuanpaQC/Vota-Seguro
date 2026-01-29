@@ -1,39 +1,75 @@
 import axios from 'axios'
 
 /**
- * Cliente Axios centralizado para pegarle al backend.
- * La URL viene de VITE_API_URL en frontend/.env
+ * Instancia centralizada de Axios para consumir el backend.
+ * baseURL se toma del .env del frontend: VITE_API_URL
+ * Esto permite cambiar la URL del backend sin modificar el código.
  */
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
 })
 
 /**
- * Obtiene topics de una elección para poblar el dropdown de comparación.
+ * Obtiene los temas (topics) asociados a una elección.
  * Endpoint: GET /elections/:electionId/topics
+ *
+ * Parámetros:
+ * - electionId: id de la elección (string)
+ *
+ * Retorna:
+ * - res.data (normalmente { topics: [...] })
  */
 export async function getElectionTopics(electionId) {
     const res = await api.get(`/elections/${electionId}/topics`)
-    return res.data // { topics: [...] }
+    return res.data
 }
 
 /**
- * Obtiene candidatos para la elección (si tu backend soporta electionId).
- * Si tu endpoint no filtra por electionId, me dices y lo ajustamos.
+ * Obtiene los candidatos asociados a una elección desde la subcolección candidatesSub.
+ * Endpoint: GET /elections/:electionId/candidatesSub
+ *
+ * Parámetros:
+ * - electionId: id de la elección (string)
+ *
+ * Normalización:
+ * - Si el backend devuelve un array directo, se convierte a { candidates: array }.
+ * - Si el backend devuelve { candidates: [...] }, se respeta.
+ * - Si no viene candidates, se retorna { candidates: [] }.
+ *
+ * Retorna:
+ * - { candidates: [...] }
  */
 export async function getCandidates(electionId) {
-    const params = electionId ? { electionId } : {}
-    const res = await api.get('/candidates', { params })
-    return res.data // { candidates: [...] }
+    const res = await api.get(`/elections/${electionId}/candidatesSub`)
+    const data = res.data
+
+    // Caso: backend devuelve un array directamente
+    if (Array.isArray(data)) return { candidates: data }
+
+    // Caso: backend devuelve un objeto con la propiedad candidates
+    return { candidates: data?.candidates ?? [] }
 }
 
 /**
- * Compara candidaturas por topic.
- * topicValue: usaremos el topicId (value) para que sea estable.
+ * Ejecuta la comparación de candidaturas para un tema específico.
+ * Endpoint: POST /proposals/compare
+ *
+ * Parámetros (objeto):
+ * - topicValue: id del tema (por ejemplo "t1")
+ * - electionId: id de la elección
+ * - candidateIds: lista de ids de candidatos a comparar (ej: ["c1","c2"])
+ *
+ * Body enviado al backend:
+ * - topic: topicValue (se envía como id del tema)
+ * - electionId
+ * - candidateIds
+ *
+ * Retorna:
+ * - res.data (estructura de comparación)
  */
 export async function compareCandidates({ topicValue, electionId, candidateIds }) {
     const res = await api.post('/proposals/compare', {
-        topic: topicValue,       // enviamos el value (topicId)
+        topic: topicValue, // se envía el topicId (ej: "t1")
         electionId,
         candidateIds,
     })

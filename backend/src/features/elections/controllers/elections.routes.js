@@ -12,6 +12,8 @@ import {
   electionUpdateSchema,
 } from '../schemas/elections.schema.js'
 import { listElectionTopicsHandler } from './electionTopics.controller.js'
+import { listElectionCandidatesSubHandler } from './electionCandidatesSub.controller.js'
+
 
 
 const router = Router()
@@ -27,5 +29,7 @@ router.delete('/:id', deleteElectionHandler)
  * para poblar el selector de temas en la pantalla de comparación.
  */
 router.get('/:id/topics', listElectionTopicsHandler)
+router.get('/:id/candidatesSub', listElectionCandidatesSubHandler)
+
 
 export default router

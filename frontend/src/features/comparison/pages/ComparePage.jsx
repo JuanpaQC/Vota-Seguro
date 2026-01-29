@@ -8,46 +8,46 @@ import {
 
 /**
  * ComparePage
- * -----------
- * Pantalla para comparar candidaturas en una elección específica.
+ * ----------
+ * Pantalla para comparar candidaturas dentro de una elección.
  *
- * UI de temas:
- * - Se muestra una barra con el "Tema actual".
- * - Al hacer clic en la barra (o "Cambiar tema"), se despliega un panel con TODOS los temas.
- * - Al seleccionar un tema, se guarda el topicValue y se cierra el panel.
- *
- * Carga de opiniones:
- * - Cuando hay topicValue y 2+ candidatos seleccionados, se llama a compareCandidates()
- *   para traer las propuestas/opiniones y mostrarlas por candidato.
+ * Flujo general:
+ * 1) Lee electionId desde la URL.
+ * 2) Carga temas de la elección.
+ * 3) Carga candidatos de la elección.
+ * 4) El usuario selecciona un tema.
+ * 5) Se llama al backend para traer opiniones/propuestas por candidato para ese tema.
+ * 6) Se muestran tarjetas por candidato (nombre, partido y propuestas).
  */
 function ComparePage() {
+    // electionId viene de la ruta (ej: /elections/:electionId/compare)
     const { electionId } = useParams()
 
-    // Lista completa de temas para el panel desplegable
+    // Lista de temas (topics) disponibles para la elección
     const [topics, setTopics] = useState([])
 
-    // Tema seleccionado: usamos el id del topic (value estable)
+    // Id del tema seleccionado (ej: "t1")
     const [topicValue, setTopicValue] = useState('')
 
-    // Control del panel desplegable de temas
+    // Controla si el panel de temas está abierto o cerrado
     const [topicsOpen, setTopicsOpen] = useState(false)
 
-    // Candidatos de la elección
+    // Lista de candidatos de la elección
     const [candidates, setCandidates] = useState([])
 
-    // Candidatos seleccionados para comparar
-    const [selectedIds, setSelectedIds] = useState([])
-
-    // Resultado de la comparación (opiniones/propuestas por candidato)
+    // Resultado del endpoint /proposals/compare
     const [result, setResult] = useState(null)
 
-    // UI state
+    // Estado de carga al pedir la comparación
     const [loading, setLoading] = useState(false)
+
+    // Mensaje de error para mostrar en UI
     const [error, setError] = useState('')
 
     /**
-     * Devuelve el topic actual (objeto completo) según topicValue.
-     * Esto permite mostrar "educación" (label/title) en la barra.
+     * currentTopic:
+     * Devuelve el objeto del tema seleccionado para mostrar su etiqueta/título en la UI.
+     * Busca en topics el tema cuyo value o id coincide con topicValue.
      */
     const currentTopic = useMemo(() => {
         if (!topicValue) return null
@@ -55,15 +55,20 @@ function ComparePage() {
     }, [topics, topicValue])
 
     /**
-     * Mapa para acceder rápido al resultado por candidateId.
+     * candidateInfoMap:
+     * Crea un mapa para poder mostrar nombre y partido por candidateId.
+     * Se arma a partir de result.candidates (devuelto por el backend en la comparación).
+     *
+     * Ejemplo de uso:
+     * - candidateInfoMap.get("c1") => { id: "c1", name: "...", party: "..." }
      */
-    const comparisonMap = useMemo(() => {
-        if (!result?.comparison) return new Map()
-        return new Map(result.comparison.map((x) => [x.candidateId, x]))
+    const candidateInfoMap = useMemo(() => {
+        const list = result?.candidates ?? []
+        return new Map(list.map((c) => [c.id, c]))
     }, [result])
 
     /**
-     * Cargar temas de la elección.
+     * Carga de temas al entrar a la pantalla (o cuando cambia electionId).
      */
     useEffect(() => {
         async function loadTopics() {
@@ -80,7 +85,7 @@ function ComparePage() {
     }, [electionId])
 
     /**
-     * Cargar candidatos de la elección.
+     * Carga de candidatos al entrar a la pantalla (o cuando cambia electionId).
      */
     useEffect(() => {
         async function loadCandidates() {
@@ -97,43 +102,37 @@ function ComparePage() {
     }, [electionId])
 
     /**
-     * Alterna un candidato en la selección.
-     * Al cambiar selección, invalidamos el resultado anterior.
+     * runCompare:
+     * Llama al backend para obtener la comparación para el tema seleccionado.
+     *
+     * - Valida que exista un tema.
+     * - Construye candidateIds con TODOS los candidatos cargados.
+     * - Ejecuta compareCandidates y guarda el resultado en result.
      */
-    function toggleCandidate(id) {
-        setResult(null)
-        setError('')
-
-        setSelectedIds((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-        )
-    }
-
-    /**
-     * Ejecuta la comparación contra el backend.
-     * Requiere:
-     * - topicValue seleccionado
-     * - al menos 2 candidatos seleccionados
-     */
-    async function runCompare(nextTopicValue = topicValue, nextSelectedIds = selectedIds) {
+    async function runCompare(nextTopicValue = topicValue) {
         setError('')
         setResult(null)
 
+        // Validación: debe existir tema seleccionado
         if (!nextTopicValue) {
             setError('Debe seleccionar un tema')
             return
         }
-        if (!Array.isArray(nextSelectedIds) || nextSelectedIds.length < 2) {
-            setError('Debe seleccionar al menos 2 candidaturas')
+
+        // Se comparan todos los candidatos cargados (ids válidos)
+        const allIds = candidates.map((c) => c.id).filter(Boolean)
+
+        if (allIds.length < 1) {
+            setError('No hay candidaturas para esta elección')
             return
         }
 
         setLoading(true)
         try {
             const data = await compareCandidates({
-                topicValue: nextTopicValue,
+                topicValue: nextTopicValue, // topicId (ej: "t1")
                 electionId,
-                candidateIds: nextSelectedIds,
+                candidateIds: allIds, // lista completa de candidatos
             })
             setResult(data)
         } catch (e) {
@@ -145,29 +144,27 @@ function ComparePage() {
     }
 
     /**
-     * Cuando el usuario elige un tema desde el panel:
-     * - Guarda topicValue
+     * handleSelectTopic:
+     * Ejecuta cuando el usuario selecciona un tema en el panel.
+     * - Guarda el tema seleccionado
      * - Cierra el panel
-     * - Si ya hay 2+ candidatos seleccionados, dispara la comparación automáticamente
+     * - Limpia errores/resultados previos
+     * - Dispara runCompare automáticamente para cargar las opiniones
      */
     function handleSelectTopic(nextValue) {
         setTopicValue(nextValue)
         setTopicsOpen(false)
         setResult(null)
         setError('')
-
-        if (selectedIds.length >= 2) {
-            // auto-cargar opiniones del tema para los candidatos seleccionados
-            runCompare(nextValue, selectedIds)
-        }
+        runCompare(nextValue)
     }
 
     /**
-     * Limpia filtros/resultados.
+     * handleClear:
+     * Limpia la selección y el resultado de comparación.
      */
     function handleClear() {
         setTopicValue('')
-        setSelectedIds([])
         setResult(null)
         setError('')
         setTopicsOpen(false)
@@ -177,9 +174,7 @@ function ComparePage() {
         <div className="p-6 max-w-5xl mx-auto">
             <h1 className="text-xl font-bold mb-4">Comparar candidaturas</h1>
 
-            {/* =========================
-          BARRA DE TEMA (en vez de select)
-         ========================= */}
+            {/* Barra de tema: muestra el tema actual o "Seleccione un tema" */}
             <div className="mb-4">
                 <div className="flex items-center justify-between gap-3">
                     <button
@@ -192,7 +187,10 @@ function ComparePage() {
                         </div>
                         <div className="mt-1 font-semibold text-[var(--app-ink)]">
                             {currentTopic
-                                ? (currentTopic.label ?? currentTopic.title ?? currentTopic.name ?? currentTopic.id)
+                                ? (currentTopic.label ??
+                                    currentTopic.title ??
+                                    currentTopic.name ??
+                                    currentTopic.id)
                                 : 'Seleccione un tema'}
                         </div>
                     </button>
@@ -206,7 +204,7 @@ function ComparePage() {
                     </button>
                 </div>
 
-                {/* Panel desplegable con TODOS los temas */}
+                {/* Panel desplegable con todos los temas */}
                 {topicsOpen ? (
                     <div className="mt-3 rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-3">
                         <p className="text-xs text-[var(--app-muted)] mb-2">
@@ -247,38 +245,7 @@ function ComparePage() {
                 ) : null}
             </div>
 
-            {/* =========================
-          SELECCIÓN DE CANDIDATOS
-         ========================= */}
-            <div className="mb-4">
-                <p className="font-semibold mb-2 text-[var(--app-ink)]">
-                    Seleccione candidaturas (mínimo 2)
-                </p>
-
-                {candidates.length === 0 ? (
-                    <p className="opacity-70 text-[var(--app-muted)]">
-                        No hay candidaturas para esta elección.
-                    </p>
-                ) : (
-                    <div className="rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-4">
-                        {candidates.map((c) => (
-                            <label key={c.id} className="block py-1 text-sm text-[var(--app-ink)]">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedIds.includes(c.id)}
-                                    onChange={() => toggleCandidate(c.id)}
-                                    className="mr-2"
-                                />
-                                {c.name || c.id}
-                            </label>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* =========================
-          ACCIONES
-         ========================= */}
+            {/* Acciones: ejecutar comparación y limpiar */}
             <div className="flex gap-3">
                 <button
                     onClick={() => runCompare()}
@@ -296,46 +263,78 @@ function ComparePage() {
                 </button>
             </div>
 
-            {/* Error */}
+            {/* Mensaje de error */}
             {error ? <p className="text-red-600 mt-4">{error}</p> : null}
 
-            {/* =========================
-          RESULTADO: OPINIONES / PROPUESTAS POR CANDIDATO
-         ========================= */}
+            {/* Resultado: tarjetas por candidato */}
             {result ? (
                 <div className="mt-6">
-                    <h2 className="font-bold mb-2 text-[var(--app-ink)]">Opiniones del tema</h2>
+                    <h2 className="font-bold mb-3 text-[var(--app-ink)]">
+                        Opiniones del tema
+                    </h2>
 
-                    <div className="border rounded-2xl border-[color:var(--app-border)] bg-white/80 p-3">
-                        {selectedIds.map((candidateId) => {
-                            const item = comparisonMap.get(candidateId)
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(result.comparison || []).map((item) => {
                             const answered = item?.answered === true
                             const proposals = item?.proposals || []
+                            const info = candidateInfoMap.get(item.candidateId)
 
                             return (
-                                <div key={candidateId} className="border-b border-[color:var(--app-border)] last:border-b-0 py-3">
-                                    <p className="text-sm text-[var(--app-ink)]">
-                                        <b>{candidateId}</b>{' '}
-                                        —{' '}
-                                        {answered ? (
-                                            <span>{proposals.length} propuestas</span>
-                                        ) : (
+                                <div
+                                    key={item.candidateId}
+                                    className="rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-4 shadow-sm"
+                                >
+                                    {/* Encabezado de tarjeta: nombre/partido y estado */}
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold text-[var(--app-ink)]">
+                                                {info?.name ?? item.candidateId}
+                                            </p>
+                                            <p className="text-xs text-[var(--app-muted)] mt-1">
+                                                {info?.party ?? 'Partido no disponible'}
+                                            </p>
+                                        </div>
+
+                                        {!answered ? (
                                             <span className="px-2 py-1 border border-[color:var(--app-border)] rounded-full text-xs">
                         Sin respuesta
                       </span>
+                                        ) : (
+                                            <span className="text-xs text-[var(--app-muted)]">
+                        {proposals.length} propuestas
+                      </span>
                                         )}
-                                    </p>
+                                    </div>
 
+                                    {/* Cuerpo de tarjeta: lista de propuestas/opiniones */}
                                     {answered && proposals.length > 0 ? (
-                                        <ul className="list-disc ml-6 mt-2 text-sm text-[var(--app-muted)]">
-                                            {proposals.slice(0, 8).map((p) => (
-                                                <li key={p.id}>
-                                                    {p.title || p.name || p.proposal || 'Propuesta'}
-                                                </li>
+                                        <div className="mt-3 space-y-3">
+                                            {proposals.slice(0, 6).map((p) => (
+                                                <div
+                                                    key={p.id}
+                                                    className="rounded-xl border border-[color:var(--app-border)] p-3"
+                                                >
+                                                    <p className="text-sm font-semibold text-[var(--app-ink)]">
+                                                        {p.text || p.title || p.name || 'Propuesta'}
+                                                    </p>
+
+                                                    {p.opinion ? (
+                                                        <p className="text-sm text-[var(--app-muted)] mt-1">
+                                                            {p.opinion}
+                                                        </p>
+                                                    ) : null}
+                                                </div>
                                             ))}
-                                            {proposals.length > 8 ? <li>…</li> : null}
-                                        </ul>
-                                    ) : null}
+
+                                            {proposals.length > 6 ? (
+                                                <p className="text-xs text-[var(--app-muted)]">…</p>
+                                            ) : null}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-[var(--app-muted)] mt-3">
+                                            No hay propuestas registradas para este tema.
+                                        </p>
+                                    )}
                                 </div>
                             )
                         })}
