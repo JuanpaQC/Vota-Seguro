@@ -18,6 +18,21 @@ export async function listProposals({ electionId, candidateId, topic } = {}) {
   return response.data
 }
 
+export async function searchProposals({ electionId, query } = {}) {
+  const params = {}
+  if (electionId) {
+    params.electionId = electionId
+  }
+  if (query) {
+    params.q = query
+  }
+
+  const response = await apiClient.get('/proposals/search', {
+    params: Object.keys(params).length ? params : undefined,
+  })
+  return response.data
+}
+
 export async function createProposal(payload) {
   const response = await apiClient.post('/proposals', payload)
   return response.data

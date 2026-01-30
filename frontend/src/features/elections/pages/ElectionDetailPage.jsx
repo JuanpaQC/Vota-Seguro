@@ -118,13 +118,19 @@ function ElectionDetailPage() {
             ) : null}
           </div>
 
-          {/* Botón para ir a Comparaciones */}
-          <div className="pt-2">
+          {/* Botones para comparar y buscar propuestas */}
+          <div className="flex flex-wrap gap-2 pt-2">
             <Link
                 to={`/elections/${id}/compare`}
                 className="inline-flex items-center rounded-full border border-[color:var(--app-border)] bg-[color:var(--app-accent)]/10 px-4 py-2 text-sm font-semibold text-[var(--app-accent-strong)] transition hover:border-[color:var(--app-accent)]"
             >
               Comparar candidaturas
+            </Link>
+            <Link
+                to={`/elections/${id}/proposals/search`}
+                className="inline-flex items-center rounded-full border border-[color:var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-ink)] transition hover:border-[color:var(--app-accent)] hover:text-[var(--app-accent-strong)]"
+            >
+              Buscar propuestas
             </Link>
           </div>
         </header>

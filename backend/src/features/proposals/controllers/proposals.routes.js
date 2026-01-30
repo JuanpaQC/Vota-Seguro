@@ -7,6 +7,7 @@ import {
   deleteProposalHandler,
   getProposalHandler,
   listProposalsHandler,
+  searchProposalsHandler,
   updateProposalHandler,
 } from './proposals.controller.js'
 import {
@@ -17,6 +18,7 @@ import {
 const router = Router()
 
 router.get('/', listProposalsHandler)
+router.get('/search', searchProposalsHandler)
 router.get('/:id', getProposalHandler)
 router.post('/', validate(proposalCreateSchema), createProposalHandler)
 router.patch('/:id', validate(proposalUpdateSchema), updateProposalHandler)
