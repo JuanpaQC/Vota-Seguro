@@ -17,6 +17,11 @@ export async function getCandidate(id) {
   return response.data
 }
 
+export async function createCandidate(payload) {
+  const response = await apiClient.post('/candidates', payload)
+  return response.data
+}
+
 export async function updateCandidate(id, payload) {
   const response = await apiClient.patch(`/candidates/${id}`, payload)
   return response.data
