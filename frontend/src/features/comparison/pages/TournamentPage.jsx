@@ -69,6 +69,8 @@ function TournamentPage() {
   const [comparison, setComparison] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [dragging, setDragging] = useState(null)
+  const [dragOver, setDragOver] = useState(null)
 
   const currentTopic = useMemo(() => {
     if (!topicValue) return null
@@ -96,6 +98,14 @@ function TournamentPage() {
     () => buildRounds(tournamentIds, decisions),
     [tournamentIds, decisions]
   )
+
+  const slotHeight = 72
+  const slotGap = 12
+
+  const getSourceForSlot = (roundIndex, matchIndex, slotIndex) => ({
+    fromRound: roundIndex - 1,
+    fromMatch: matchIndex * 2 + slotIndex,
+  })
 
   useEffect(() => {
     async function loadTopics() {
@@ -204,6 +214,182 @@ function TournamentPage() {
       ...prev,
       [key]: candidateId,
     }))
+  }
+
+  function handleDragStart(candidateId, roundIndex, matchIndex, event) {
+    const payload = { candidateId, fromRound: roundIndex, fromMatch: matchIndex }
+    if (event?.dataTransfer) {
+      event.dataTransfer.setData('text/plain', JSON.stringify(payload))
+      event.dataTransfer.effectAllowed = 'move'
+    }
+    setDragging(payload)
+  }
+
+  function handleDragEnd() {
+    setDragging(null)
+    setDragOver(null)
+  }
+
+  function handleDrop(targetRound, targetMatch, slotIndex, event) {
+    event?.preventDefault?.()
+    if (!dragging) return
+
+    const expected = getSourceForSlot(targetRound, targetMatch, slotIndex)
+    if (
+      dragging.fromRound === expected.fromRound &&
+      dragging.fromMatch === expected.fromMatch
+    ) {
+      chooseWinner(expected.fromRound, expected.fromMatch, dragging.candidateId)
+    }
+    setDragOver(null)
+    setDragging(null)
+  }
+
+  function renderSlot(candidateId, roundIndex, matchIndex, slotIndex, isWinner) {
+    const isDropSlot = roundIndex > 0
+    const dropKey = `${roundIndex}-${matchIndex}-${slotIndex}`
+    const source = isDropSlot
+      ? getSourceForSlot(roundIndex, matchIndex, slotIndex)
+      : null
+    const isDropAllowed =
+      isDropSlot &&
+      dragging &&
+      dragging.fromRound === source.fromRound &&
+      dragging.fromMatch === source.fromMatch
+    const isActiveDrop = isDropAllowed && dragOver === dropKey
+    const candidate = candidateId ? candidateById.get(candidateId) : null
+    const proposals = candidateId
+      ? proposalsByCandidate.get(candidateId) || []
+      : []
+
+    let wrapperStyle =
+      'border-[color:var(--app-border)] bg-white/90'
+    if (isDropSlot && !candidateId) {
+      wrapperStyle = 'border-dashed border-[color:var(--app-border)] bg-white/70'
+    }
+    if (isActiveDrop) {
+      wrapperStyle =
+        'border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent)]/10'
+    }
+
+    const tooltipLines =
+      proposals.length > 0
+        ? proposals
+            .slice(0, 3)
+            .map((proposal) => proposal.title || proposal.summary || 'Propuesta')
+        : [
+            comparison
+              ? 'Sin propuestas para este tema.'
+              : loading
+              ? 'Cargando propuestas...'
+              : 'Inicia el torneo para cargar propuestas.',
+          ]
+
+    return (
+      <div
+        key={`${matchIndex}-${slotIndex}`}
+        className={[
+          'group relative rounded-2xl border px-3 py-2 transition',
+          wrapperStyle,
+        ].join(' ')}
+        style={{ minHeight: `${slotHeight}px` }}
+        onDragOver={
+          isDropAllowed
+            ? (event) => {
+                event.preventDefault()
+                setDragOver(dropKey)
+              }
+            : undefined
+        }
+        onDragLeave={
+          isDropAllowed
+            ? () => {
+                if (dragOver === dropKey) {
+                  setDragOver(null)
+                }
+              }
+            : undefined
+        }
+        onDrop={
+          isDropAllowed
+            ? (event) => handleDrop(roundIndex, matchIndex, slotIndex, event)
+            : undefined
+        }
+      >
+        {roundIndex > 0 ? (
+          <span
+            className="absolute -left-6 top-1/2 h-px w-6 bg-[var(--app-border)]"
+            aria-hidden="true"
+          />
+        ) : null}
+
+        {candidateId ? (
+          <button
+            type="button"
+            draggable
+            onDragStart={(event) =>
+              handleDragStart(candidateId, roundIndex, matchIndex, event)
+            }
+            onDragEnd={handleDragEnd}
+            onClick={() => chooseWinner(roundIndex, matchIndex, candidateId)}
+            className="flex w-full items-start gap-3 text-left"
+            title="Arrastra para avanzar o haz click para elegir."
+          >
+            <div className="mt-1 h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[color:var(--app-border)] bg-[var(--app-bg)]">
+              {candidate?.photoUrl ? (
+                <img
+                  src={candidate.photoUrl}
+                  alt={candidate?.name ?? 'Candidato'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--app-muted)]">
+                  Sin foto
+                </div>
+              )}
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--app-ink)]">
+                    {candidate?.name ?? candidateId}
+                  </p>
+                  <p className="text-xs text-[var(--app-muted)]">
+                    {candidate?.party ?? 'Partido no disponible'}
+                  </p>
+                </div>
+                {isWinner ? (
+                  <span className="rounded-full bg-[color:var(--app-accent-strong)] px-2 py-0.5 text-[10px] font-semibold text-white">
+                    Gana
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-[var(--app-muted)]">
+                    Elegir
+                  </span>
+                )}
+              </div>
+            </div>
+          </button>
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-[var(--app-muted)]">
+            {roundIndex === 0 ? 'Sin rival' : 'Arrastra aqui'}
+          </div>
+        )}
+
+        {candidateId ? (
+          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-64 -translate-x-1/2 rounded-2xl border border-[color:var(--app-border)] bg-white p-3 text-xs text-[var(--app-ink)] opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--app-muted)]">
+              Propuestas del tema
+            </p>
+            <div className="mt-2 space-y-1 text-[var(--app-muted)]">
+              {tooltipLines.map((line, index) => (
+                <p key={`${candidateId}-tip-${index}`}>- {line}</p>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   return (
@@ -400,13 +586,18 @@ function TournamentPage() {
 
       {rounds.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-[var(--app-ink)]">
-            Llave del torneo
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-[var(--app-ink)]">
+              Llave del torneo
+            </h2>
+            <span className="text-xs text-[var(--app-muted)]">
+              Arrastra al candidato a la celda siguiente o haz click para elegir.
+            </span>
+          </div>
           <div className="overflow-x-auto">
-            <div className="grid grid-flow-col auto-cols-[minmax(240px,1fr)] gap-6 pb-4">
+            <div className="grid grid-flow-col auto-cols-[minmax(260px,1fr)] gap-10 pb-6">
               {rounds.map((round, roundIndex) => (
-                <div key={`round-${roundIndex}`} className="space-y-4">
+                <div key={`round-${roundIndex}`} className="space-y-5">
                   <div className="text-xs uppercase tracking-[0.3em] text-[var(--app-muted)]">
                     {rounds.length === 1
                       ? 'Final'
@@ -414,94 +605,57 @@ function TournamentPage() {
                       ? 'Final'
                       : `Ronda ${roundIndex + 1}`}
                   </div>
-                  {round.map((match, matchIndex) => (
-                    <div
-                      key={match.key}
-                      className="rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-3 shadow-sm"
-                    >
-                      {[match.a, match.b].map((candidateId, slotIndex) => {
-                        if (!candidateId) {
-                          return (
-                            <div
-                              key={`empty-${slotIndex}`}
-                              className="rounded-xl border border-dashed border-[color:var(--app-border)] px-3 py-2 text-xs text-[var(--app-muted)]"
-                            >
-                              Sin rival
-                            </div>
-                          )
-                        }
+                  {round.map((match, matchIndex) => {
+                    const showConnectors = roundIndex < rounds.length - 1
 
-                        const candidate = candidateById.get(candidateId)
-                        const proposals =
-                          proposalsByCandidate.get(candidateId) || []
-                        const isWinner = match.winner === candidateId
+                    return (
+                      <div
+                        key={match.key}
+                        className="relative"
+                        style={{
+                          '--slot-h': `${slotHeight}px`,
+                          '--slot-gap': `${slotGap}px`,
+                        }}
+                      >
+                        <div className="space-y-3">
+                          {renderSlot(
+                            match.a,
+                            roundIndex,
+                            matchIndex,
+                            0,
+                            match.winner === match.a
+                          )}
+                          {renderSlot(
+                            match.b,
+                            roundIndex,
+                            matchIndex,
+                            1,
+                            match.winner === match.b
+                          )}
+                        </div>
 
-                        return (
-                          <button
-                            key={candidateId}
-                            type="button"
-                            onClick={() =>
-                              chooseWinner(roundIndex, matchIndex, candidateId)
-                            }
-                            className={[
-                              'mt-2 flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left transition',
-                              isWinner
-                                ? 'border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent)]/15'
-                                : 'border-[color:var(--app-border)] hover:border-[color:var(--app-accent)]',
-                            ].join(' ')}
-                          >
-                            <div className="mt-1 h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[color:var(--app-border)] bg-[var(--app-bg)]">
-                              {candidate?.photoUrl ? (
-                                <img
-                                  src={candidate.photoUrl}
-                                  alt={candidate?.name ?? 'Candidato'}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--app-muted)]">
-                                  Sin foto
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <div>
-                                  <p className="text-sm font-semibold text-[var(--app-ink)]">
-                                    {candidate?.name ?? candidateId}
-                                  </p>
-                                  <p className="text-xs text-[var(--app-muted)]">
-                                    {candidate?.party ?? 'Partido no disponible'}
-                                  </p>
-                                </div>
-                                {isWinner ? (
-                                  <span className="rounded-full bg-[color:var(--app-accent-strong)] px-2 py-0.5 text-[10px] font-semibold text-white">
-                                    Gana
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] font-semibold text-[var(--app-muted)]">
-                                    Elegir
-                                  </span>
-                                )}
-                              </div>
-                              {proposals.length > 0 ? (
-                                <div className="space-y-1 text-xs text-[var(--app-muted)]">
-                                  {proposals.slice(0, 2).map((proposal) => (
-                                    <p key={proposal.id}>
-                                      - {proposal.title ?? proposal.summary ?? 'Propuesta'}
-                                    </p>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-[var(--app-muted)]">
-                                  Sin propuestas para este tema.
-                                </p>
-                              )}
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ))}
+                        {showConnectors ? (
+                          <>
+                            <span
+                              className="absolute right-0 w-px bg-[var(--app-border)]"
+                              style={{
+                                top: 'calc(var(--slot-h) / 2)',
+                                height: 'calc(var(--slot-h) + var(--slot-gap))',
+                              }}
+                              aria-hidden="true"
+                            />
+                            <span
+                              className="absolute -right-7 h-px w-7 bg-[var(--app-border)]"
+                              style={{
+                                top: 'calc(var(--slot-h) + var(--slot-gap) / 2)',
+                              }}
+                              aria-hidden="true"
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    )
+                  })}
                 </div>
               ))}
             </div>
