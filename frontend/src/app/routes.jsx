@@ -12,6 +12,7 @@ import OrganizerProposalEditPage from '../features/admin/pages/OrganizerProposal
 import OrganizerProtectedRoute from '../features/auth/routes/OrganizerProtectedRoute.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import ComparePage from '../features/comparison/pages/ComparePage.jsx'
+import TournamentPage from '../features/comparison/pages/TournamentPage.jsx'
 
 
 function AppRoutes() {
@@ -21,6 +22,10 @@ function AppRoutes() {
         <Route
             path="elections/:electionId/compare"
             element={<ComparePage />}
+        />
+        <Route
+            path="elections/:electionId/tournament"
+            element={<TournamentPage />}
         />
         <Route index element={<ElectionListPage />} />
         <Route

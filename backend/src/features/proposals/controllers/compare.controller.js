@@ -3,52 +3,74 @@ import { db } from '../../../config/firebase.js'
 export const compareCandidatesHandler = async (req, res) => {
     try {
         const { topic, electionId, candidateIds } = req.body
-        // En tu front "topic" realmente es el topicId (ej: "t1")
-        const topicId = topic
+        // En el front "topic" es el id/valor del tema (ej: "educacion" o "t1")
+        const topicValue = topic
+        const normalize = (value) =>
+            (value ?? '')
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim()
+
+        const matchesElectionId = (value) => {
+            if (!value) return false
+            if (typeof value === 'string') return value.trim() === electionId
+            if (typeof value === 'object' && value.id) return value.id === electionId
+            return value.toString?.() === electionId
+        }
+
+        const matchesTopic = (proposal) => {
+            const target = normalize(topicValue)
+            if (!target) return false
+            const candidates = [proposal.topic, proposal.type].filter(Boolean)
+            return candidates.some((value) => normalize(value).includes(target))
+        }
 
         if (!electionId) {
             return res.status(400).json({ message: 'electionId is required' })
         }
 
-        if (!topicId) {
+        if (!topicValue) {
             return res.status(400).json({ message: 'topic (topicId) is required' })
         }
 
-        if (!Array.isArray(candidateIds) || candidateIds.length < 2) {
+        if (!Array.isArray(candidateIds) || candidateIds.length < 1) {
             return res.status(400).json({
-                message: 'At least two candidates are required',
+                message: 'At least one candidate is required',
             })
         }
 
-        // Obtener info de candidatos desde elections/{electionId}/candidatesSub
+        // Obtener info de candidatos desde la colección global "candidates"
         const candidateDocs = await Promise.all(
             candidateIds.map((id) =>
-                db
-                    .collection('elections')
-                    .doc(electionId)
-                    .collection('candidatesSub')
-                    .doc(id)
-                    .get()
+                db.collection('candidates').doc(id).get()
             )
         )
 
         const candidates = candidateDocs
             .filter((doc) => doc.exists)
             .map((doc) => ({ id: doc.id, ...doc.data() }))
+            // Seguridad extra: solo candidatos del proceso de elección actual
+            .filter((candidate) => candidate.electionId === electionId)
 
-        // Obtener opiniones desde elections/{electionId}/opinions filtrando por topicId
+        // Obtener propuestas desde "proposals" usando keyword (topic/type) y electionId
         const comparison = await Promise.all(
             candidateIds.map(async (candidateId) => {
-                const ref = db
-                    .collection('elections')
-                    .doc(electionId)
-                    .collection('opinions')
+                const snap = await db
+                    .collection('proposals')
                     .where('candidateId', '==', candidateId)
-                    .where('topicId', '==', topicId)
+                    .get()
 
-                const snap = await ref.get()
+                const proposals = snap.docs
+                    .map((d) => ({ id: d.id, ...d.data() }))
+                    .filter(
+                        (proposal) =>
+                            matchesElectionId(proposal.electionId) &&
+                            matchesTopic(proposal)
+                    )
 
-                if (snap.empty) {
+                if (proposals.length === 0) {
                     return {
                         candidateId,
                         answered: false,
@@ -59,16 +81,13 @@ export const compareCandidatesHandler = async (req, res) => {
                 return {
                     candidateId,
                     answered: true,
-                    proposals: snap.docs.map((d) => ({
-                        id: d.id,
-                        ...d.data(),
-                    })),
+                    proposals,
                 }
             })
         )
 
         return res.json({
-            topic: topicId,
+            topic: topicValue,
             candidates,
             comparison,
         })

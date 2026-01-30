@@ -1,13 +1,4 @@
-import axios from 'axios'
-
-/**
- * Instancia centralizada de Axios para consumir el backend.
- * baseURL se toma del .env del frontend: VITE_API_URL
- * Esto permite cambiar la URL del backend sin modificar el código.
- */
-const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
-})
+import apiClient from './api/client.js'
 
 /**
  * Obtiene los temas (topics) asociados a una elección.
@@ -20,13 +11,13 @@ const api = axios.create({
  * - res.data (normalmente { topics: [...] })
  */
 export async function getElectionTopics(electionId) {
-    const res = await api.get(`/elections/${electionId}/topics`)
+    const res = await apiClient.get(`/elections/${electionId}/topics`)
     return res.data
 }
 
 /**
- * Obtiene los candidatos asociados a una elección desde la subcolección candidatesSub.
- * Endpoint: GET /elections/:electionId/candidatesSub
+ * Obtiene los candidatos asociados a una elección desde la colección global candidates.
+ * Endpoint: GET /candidates?electionId=...
  *
  * Parámetros:
  * - electionId: id de la elección (string)
@@ -40,7 +31,9 @@ export async function getElectionTopics(electionId) {
  * - { candidates: [...] }
  */
 export async function getCandidates(electionId) {
-    const res = await api.get(`/elections/${electionId}/candidatesSub`)
+    const res = await apiClient.get('/candidates', {
+        params: electionId ? { electionId } : undefined,
+    })
     const data = res.data
 
     // Caso: backend devuelve un array directamente
@@ -68,7 +61,7 @@ export async function getCandidates(electionId) {
  * - res.data (estructura de comparación)
  */
 export async function compareCandidates({ topicValue, electionId, candidateIds }) {
-    const res = await api.post('/proposals/compare', {
+    const res = await apiClient.post('/proposals/compare', {
         topic: topicValue, // se envía el topicId (ej: "t1")
         electionId,
         candidateIds,

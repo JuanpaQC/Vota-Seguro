@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import {
     getCandidates,
     getElectionTopics,
@@ -245,15 +245,28 @@ function ComparePage() {
                 ) : null}
             </div>
 
-            {/* Acciones: ejecutar comparación y limpiar */}
-            <div className="flex gap-3">
+            {/* Acciones: ejecutar comparación, torneo y limpiar */}
+            <div className="flex flex-wrap gap-3">
                 <button
                     onClick={() => runCompare()}
                     disabled={loading}
                     className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-60"
                 >
-                    {loading ? 'Cargando...' : 'Ver opiniones'}
+                    {loading ? 'Cargando...' : 'Ver Propuestas'}
                 </button>
+
+                <Link
+                    to={
+                        topicValue
+                            ? `/elections/${electionId}/tournament?topic=${encodeURIComponent(
+                                  topicValue
+                              )}`
+                            : `/elections/${electionId}/tournament`
+                    }
+                    className="rounded border border-[color:var(--app-border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--app-ink)] transition hover:border-[color:var(--app-accent)]"
+                >
+                    Torneo de candidatos
+                </Link>
 
                 <button
                     onClick={handleClear}
@@ -270,7 +283,7 @@ function ComparePage() {
             {result ? (
                 <div className="mt-6">
                     <h2 className="font-bold mb-3 text-[var(--app-ink)]">
-                        Opiniones del tema
+                        Propuestas del tema
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -286,13 +299,29 @@ function ComparePage() {
                                 >
                                     {/* Encabezado de tarjeta: nombre/partido y estado */}
                                     <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="font-semibold text-[var(--app-ink)]">
-                                                {info?.name ?? item.candidateId}
-                                            </p>
-                                            <p className="text-xs text-[var(--app-muted)] mt-1">
-                                                {info?.party ?? 'Partido no disponible'}
-                                            </p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[color:var(--app-border)] bg-[var(--app-bg)]">
+                                                {info?.photoUrl ? (
+                                                    <img
+                                                        src={info.photoUrl}
+                                                        alt={info?.name ?? 'Candidato'}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--app-muted)]">
+                                                        Sin foto
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <p className="font-semibold text-[var(--app-ink)]">
+                                                    {info?.name ?? item.candidateId}
+                                                </p>
+                                                <p className="text-xs text-[var(--app-muted)] mt-1">
+                                                    {info?.party ?? 'Partido no disponible'}
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {!answered ? (
@@ -318,9 +347,9 @@ function ComparePage() {
                                                         {p.text || p.title || p.name || 'Propuesta'}
                                                     </p>
 
-                                                    {p.opinion ? (
+                                                    {p.opinion || p.summary || p.detail ? (
                                                         <p className="text-sm text-[var(--app-muted)] mt-1">
-                                                            {p.opinion}
+                                                            {p.opinion || p.summary || p.detail}
                                                         </p>
                                                     ) : null}
                                                 </div>
