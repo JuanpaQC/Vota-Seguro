@@ -12,6 +12,11 @@ import {
   createProposal,
   listProposals,
 } from '../../proposals/services/proposalsService.js'
+import {
+  createInterview,
+  deleteInterview,
+  listInterviews,
+} from '../../interviews/services/interviewsService.js'
 import { signOutOrganizer } from '../services/authService.js'
 import useAuth from '../hooks/useAuth.js'
 
@@ -22,11 +27,13 @@ function OrganizerDashboardPage() {
   const [elections, setElections] = useState([])
   const [candidates, setCandidates] = useState([])
   const [proposals, setProposals] = useState([])
+  const [interviews, setInterviews] = useState([])
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
   const [busyMap, setBusyMap] = useState({})
   const [proposalDrafts, setProposalDrafts] = useState({})
+  const [interviewDrafts, setInterviewDrafts] = useState({})
 
   const emptyProposal = {
     title: '',
@@ -35,6 +42,12 @@ function OrganizerDashboardPage() {
     summary: '',
     detail: '',
     sourceUrl: '',
+  }
+
+  const emptyInterview = {
+    description: '',
+    photoUrl: '',
+    interviewUrl: '',
   }
 
   const candidatesByElection = useMemo(() => {
@@ -55,19 +68,30 @@ function OrganizerDashboardPage() {
     }, {})
   }, [proposals])
 
+  const interviewsByCandidate = useMemo(() => {
+    return interviews.reduce((acc, interview) => {
+      const key = interview.candidateId || 'unknown'
+      if (!acc[key]) acc[key] = []
+      acc[key].push(interview)
+      return acc
+    }, {})
+  }, [interviews])
+
   const loadData = async () => {
     setIsLoadingData(true)
     setLoadError('')
     setActionError('')
     try {
-      const [electionsData, candidatesData, proposalsData] = await Promise.all([
+      const [electionsData, candidatesData, proposalsData, interviewsData] = await Promise.all([
         listElections(),
         listCandidates(),
         listProposals(),
+        listInterviews(),
       ])
       setElections(electionsData)
       setCandidates(candidatesData)
       setProposals(proposalsData)
+      setInterviews(interviewsData)
     } catch (err) {
       setLoadError('No se pudieron cargar los procesos electorales.')
     } finally {
@@ -165,6 +189,100 @@ function OrganizerDashboardPage() {
           submitting: false,
         },
       }))
+    }
+  }
+
+  const toggleInterviewForm = (candidateId) => {
+    setInterviewDrafts((prev) => {
+      const current = prev[candidateId] || { isOpen: false, data: emptyInterview }
+      return {
+        ...prev,
+        [candidateId]: {
+          ...current,
+          isOpen: !current.isOpen,
+          data: current.data || emptyInterview,
+          error: '',
+        },
+      }
+    })
+  }
+
+  const updateInterviewDraftField = (candidateId, field, value) => {
+    setInterviewDrafts((prev) => {
+      const current = prev[candidateId] || { isOpen: true, data: emptyInterview }
+      return {
+        ...prev,
+        [candidateId]: {
+          ...current,
+          data: { ...current.data, [field]: value },
+          error: '',
+        },
+      }
+    })
+  }
+
+  const handleCreateInterview = async (candidate) => {
+    const draft = interviewDrafts[candidate.id]?.data || emptyInterview
+    if (!draft.description.trim() || !draft.interviewUrl.trim()) {
+      setInterviewDrafts((prev) => ({
+        ...prev,
+        [candidate.id]: {
+          ...(prev[candidate.id] || { isOpen: true, data: draft }),
+          error: 'Descripcion y link son obligatorios.',
+        },
+      }))
+      return
+    }
+
+    setInterviewDrafts((prev) => ({
+      ...prev,
+      [candidate.id]: {
+        ...(prev[candidate.id] || { isOpen: true, data: draft }),
+        submitting: true,
+        error: '',
+      },
+    }))
+
+    try {
+      const payload = {
+        description: draft.description.trim(),
+        photoUrl: draft.photoUrl.trim() || undefined,
+        interviewUrl: draft.interviewUrl.trim(),
+        candidateId: candidate.id,
+        electionId: candidate.electionId,
+      }
+      const created = await createInterview(payload)
+      setInterviews((prev) => [...prev, created])
+      setInterviewDrafts((prev) => ({
+        ...prev,
+        [candidate.id]: {
+          isOpen: false,
+          data: emptyInterview,
+          error: '',
+          submitting: false,
+        },
+      }))
+    } catch (err) {
+      setInterviewDrafts((prev) => ({
+        ...prev,
+        [candidate.id]: {
+          ...(prev[candidate.id] || { isOpen: true, data: draft }),
+          error: 'No se pudo agregar la entrevista.',
+          submitting: false,
+        },
+      }))
+    }
+  }
+
+  const handleDeleteInterview = async (interview) => {
+    const confirmed = window.confirm('¿Eliminar esta entrevista?')
+    if (!confirmed) return
+
+    try {
+      await deleteInterview(interview.id)
+      setInterviews((prev) => prev.filter((item) => item.id !== interview.id))
+    } catch (err) {
+      setActionError('No se pudo eliminar la entrevista.')
     }
   }
 
@@ -381,9 +499,16 @@ function OrganizerDashboardPage() {
                       <div className="mt-3 space-y-4">
                         {electionCandidates.map((candidate) => {
                           const candidateProposals = proposalsByCandidate[candidate.id] || []
+                          const candidateInterviews = interviewsByCandidate[candidate.id] || []
                           const draftState = proposalDrafts[candidate.id] || {
                             isOpen: false,
                             data: emptyProposal,
+                            error: '',
+                            submitting: false,
+                          }
+                          const interviewDraftState = interviewDrafts[candidate.id] || {
+                            isOpen: false,
+                            data: emptyInterview,
                             error: '',
                             submitting: false,
                           }
@@ -581,6 +706,138 @@ function OrganizerDashboardPage() {
                                         {draftState.submitting
                                           ? 'Guardando...'
                                           : 'Guardar propuesta'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              <div className="mt-3 rounded-2xl border border-dashed border-[color:var(--app-border)] bg-white/70 p-3">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--app-muted)]">
+                                    Entrevistas
+                                  </p>
+                                  <span className="text-[10px] font-semibold text-[var(--app-ink)]">
+                                    {candidateInterviews.length}
+                                  </span>
+                                </div>
+                                {candidateInterviews.length ? (
+                                  <div className="mt-2 space-y-2">
+                                    {candidateInterviews.map((interview) => (
+                                      <div
+                                        key={interview.id}
+                                        className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[color:var(--app-border)] bg-white/80 px-3 py-2"
+                                      >
+                                        <div className="flex-1">
+                                          <p className="text-sm font-semibold text-[var(--app-ink)]">
+                                            {interview.description}
+                                          </p>
+                                          {interview.interviewUrl && (
+                                            <a
+                                              href={interview.interviewUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-[10px] text-[var(--app-accent-strong)] hover:underline"
+                                            >
+                                              Ver entrevista →
+                                            </a>
+                                          )}
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteInterview(interview)}
+                                          className="rounded-full border border-red-200 bg-white px-3 py-1 text-[10px] font-semibold text-red-700 transition hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-50"
+                                        >
+                                          Eliminar
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="mt-2 text-xs text-[var(--app-muted)]">
+                                    Sin entrevistas registradas.
+                                  </p>
+                                )}
+
+                                <div className="mt-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleInterviewForm(candidate.id)}
+                                    className="rounded-full border border-[color:var(--app-border)] bg-white px-3 py-1 text-[10px] font-semibold text-[var(--app-ink)] transition hover:-translate-y-0.5 hover:border-[color:var(--app-accent)] hover:text-[var(--app-accent-strong)]"
+                                  >
+                                    {interviewDraftState.isOpen
+                                      ? 'Cancelar'
+                                      : 'Agregar entrevista'}
+                                  </button>
+                                </div>
+
+                                {interviewDraftState.isOpen ? (
+                                  <div className="mt-3 grid gap-3 rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-3 md:grid-cols-2">
+                                    <label className="md:col-span-2 space-y-1 text-[11px] font-medium text-[var(--app-ink)]">
+                                      Descripcion corta
+                                      <input
+                                        type="text"
+                                        value={interviewDraftState.data.description}
+                                        onChange={(event) =>
+                                          updateInterviewDraftField(
+                                            candidate.id,
+                                            'description',
+                                            event.target.value
+                                          )
+                                        }
+                                        placeholder="Entrevista sobre economia con Canal 7"
+                                        className="w-full rounded-2xl border border-[color:var(--app-border)] bg-white px-3 py-2 text-xs shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
+                                      />
+                                    </label>
+                                    <label className="space-y-1 text-[11px] font-medium text-[var(--app-ink)]">
+                                      Foto (URL)
+                                      <input
+                                        type="url"
+                                        value={interviewDraftState.data.photoUrl}
+                                        onChange={(event) =>
+                                          updateInterviewDraftField(
+                                            candidate.id,
+                                            'photoUrl',
+                                            event.target.value
+                                          )
+                                        }
+                                        placeholder="https://ejemplo.com/imagen.jpg"
+                                        className="w-full rounded-2xl border border-[color:var(--app-border)] bg-white px-3 py-2 text-xs shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
+                                      />
+                                    </label>
+                                    <label className="space-y-1 text-[11px] font-medium text-[var(--app-ink)]">
+                                      Link de la entrevista (URL)
+                                      <input
+                                        type="url"
+                                        value={interviewDraftState.data.interviewUrl}
+                                        onChange={(event) =>
+                                          updateInterviewDraftField(
+                                            candidate.id,
+                                            'interviewUrl',
+                                            event.target.value
+                                          )
+                                        }
+                                        placeholder="https://youtube.com/watch?v=..."
+                                        className="w-full rounded-2xl border border-[color:var(--app-border)] bg-white px-3 py-2 text-xs shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
+                                      />
+                                    </label>
+
+                                    {interviewDraftState.error ? (
+                                      <div className="md:col-span-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                                        {interviewDraftState.error}
+                                      </div>
+                                    ) : null}
+
+                                    <div className="md:col-span-2 flex flex-wrap items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCreateInterview(candidate)}
+                                        disabled={interviewDraftState.submitting}
+                                        className="rounded-full bg-[color:var(--app-accent-strong)] px-4 py-1.5 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(208,95,47,0.3)] transition hover:-translate-y-0.5 hover:bg-[color:var(--app-accent)] disabled:cursor-not-allowed disabled:opacity-70"
+                                      >
+                                        {interviewDraftState.submitting
+                                          ? 'Guardando...'
+                                          : 'Guardar entrevista'}
                                       </button>
                                     </div>
                                   </div>

@@ -114,7 +114,7 @@ function ProposalSearchPage() {
                       </h3>
                     </div>
                     <span className="text-xs font-semibold text-[var(--app-accent-strong)]">
-                      Ver detalle ->
+                      Ver detalle -{'>'}
                     </span>
                   </div>
 

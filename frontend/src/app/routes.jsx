@@ -15,6 +15,7 @@ import ComparePage from '../features/comparison/pages/ComparePage.jsx'
 import TournamentPage from '../features/comparison/pages/TournamentPage.jsx'
 import ProposalSearchPage from '../features/proposals/pages/ProposalSearchPage.jsx'
 import ProposalDetailPage from '../features/proposals/pages/ProposalDetailPage.jsx'
+import InterviewsListPage from '../features/interviews/pages/InterviewsListPage.jsx'
 
 
 function AppRoutes() {
@@ -36,6 +37,10 @@ function AppRoutes() {
         <Route
             path="elections/:electionId/proposals/:proposalId"
             element={<ProposalDetailPage />}
+        />
+        <Route
+            path="elections/:electionId/interviews"
+            element={<InterviewsListPage />}
         />
         <Route index element={<ElectionListPage />} />
         <Route

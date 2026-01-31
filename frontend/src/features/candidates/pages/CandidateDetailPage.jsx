@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getCandidate } from '../services/candidatesService.js'
 import { listProposals } from '../../proposals/services/proposalsService.js'
+import { listInterviews } from '../../interviews/services/interviewsService.js'
 import { getElection } from '../../elections/services/electionsService.js'
 
 function CandidateDetailPage() {
@@ -9,6 +10,7 @@ function CandidateDetailPage() {
   const [candidate, setCandidate] = useState(null)
   const [election, setElection] = useState(null)
   const [proposals, setProposals] = useState([])
+  const [interviews, setInterviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('biografia')
@@ -20,16 +22,18 @@ function CandidateDetailPage() {
       setLoading(true)
       setError('')
       try {
-        const [candidateData, electionData, proposalsData] = await Promise.all([
+        const [candidateData, electionData, proposalsData, interviewsData] = await Promise.all([
           getCandidate(candidateId),
           getElection(electionId),
           listProposals({ candidateId }),
+          listInterviews({ candidateId }),
         ])
 
         if (isMounted) {
           setCandidate(candidateData)
           setElection(electionData)
           setProposals(proposalsData)
+          setInterviews(interviewsData)
         }
       } catch (err) {
         if (isMounted) {
@@ -74,6 +78,7 @@ function CandidateDetailPage() {
 
   const tabs = [
     { id: 'biografia', label: 'Biografia' },
+    { id: 'entrevistas', label: 'Entrevistas' },
     { id: 'plan', label: 'Plan de gobierno' },
     { id: 'propuestas', label: 'Propuestas' },
     { id: 'ideologia', label: 'Ideologia' },
@@ -273,6 +278,54 @@ function CandidateDetailPage() {
             ) : (
               <p className="text-sm text-[var(--app-muted)]">
                 No hay propuestas registradas.
+              </p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'entrevistas' && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-[var(--font-display)] text-[var(--app-ink)]">
+              Entrevistas
+            </h2>
+            {interviews.length ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {interviews.map((interview) => (
+                  <div
+                    key={interview.id}
+                    className="overflow-hidden rounded-2xl border border-[color:var(--app-border)] bg-white/90 transition hover:shadow-md"
+                  >
+                    {interview.photoUrl && (
+                      <div className="flex-shrink-0 overflow-hidden">
+                        <img
+                          src={interview.photoUrl}
+                          alt="Entrevista"
+                          className="h-48 w-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <p className="mb-4 text-sm leading-relaxed text-[var(--app-ink)]">
+                        {interview.description}
+                      </p>
+                      <a
+                        href={interview.interviewUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full bg-[color:var(--app-accent-strong)] px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-[color:var(--app-accent)]"
+                      >
+                        Ver entrevista →
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--app-muted)]">
+                No hay entrevistas registradas.
               </p>
             )}
           </div>

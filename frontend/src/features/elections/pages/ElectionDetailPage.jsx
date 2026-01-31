@@ -132,6 +132,12 @@ function ElectionDetailPage() {
             >
               Buscar propuestas
             </Link>
+            <Link
+                to={`/elections/${id}/interviews`}
+                className="inline-flex items-center rounded-full border border-[color:var(--app-border)] px-4 py-2 text-sm font-semibold text-[var(--app-ink)] transition hover:border-[color:var(--app-accent)] hover:text-[var(--app-accent-strong)]"
+            >
+              Ver entrevistas
+            </Link>
           </div>
         </header>
 
