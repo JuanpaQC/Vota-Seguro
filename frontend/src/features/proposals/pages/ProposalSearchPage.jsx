@@ -1,19 +1,43 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { searchProposals } from '../services/proposalsService.js'
+import { listCandidates } from '../../candidates/services/candidatesService.js'
 
 function ProposalSearchPage() {
   const { electionId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState(() => searchParams.get('q') || '')
+  const [selectedCandidates, setSelectedCandidates] = useState(() => {
+    const ids = searchParams.get('candidates')
+    return ids ? ids.split(',').filter(Boolean) : []
+  })
+  const [candidates, setCandidates] = useState([])
+  const [showCandidateFilter, setShowCandidateFilter] = useState(false)
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
 
+  // Load candidates for the election
+  useEffect(() => {
+    async function loadCandidates() {
+      try {
+        const data = await listCandidates({ electionId })
+        setCandidates(data)
+      } catch (err) {
+        console.error('Error loading candidates:', err)
+      }
+    }
+    loadCandidates()
+  }, [electionId])
+
   useEffect(() => {
     const nextQuery = (searchParams.get('q') || '').trim()
+    const candidatesParam = searchParams.get('candidates') || ''
+    const nextSelectedCandidates = candidatesParam ? candidatesParam.split(',').filter(Boolean) : []
+    
     setQuery(nextQuery)
+    setSelectedCandidates(nextSelectedCandidates)
 
     if (!nextQuery) {
       setResults([])
@@ -28,6 +52,7 @@ function ProposalSearchPage() {
         const data = await searchProposals({
           electionId,
           query: nextQuery,
+          candidateIds: nextSelectedCandidates,
         })
         setResults(data.results || [])
         setHasSearched(true)
@@ -45,7 +70,23 @@ function ProposalSearchPage() {
   function handleSubmit(event) {
     event.preventDefault()
     const nextQuery = query.trim()
-    setSearchParams(nextQuery ? { q: nextQuery } : {})
+    const params = {}
+    if (nextQuery) {
+      params.q = nextQuery
+    }
+    if (selectedCandidates.length > 0) {
+      params.candidates = selectedCandidates.join(',')
+    }
+    setSearchParams(Object.keys(params).length ? params : {})
+  }
+
+  function toggleCandidate(candidateId) {
+    setSelectedCandidates((prev) => {
+      if (prev.includes(candidateId)) {
+        return prev.filter((id) => id !== candidateId)
+      }
+      return [...prev, candidateId]
+    })
   }
 
   return (
@@ -70,22 +111,59 @@ function ProposalSearchPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-3 rounded-3xl border border-[color:var(--app-border)] bg-white/80 p-4 shadow-sm sm:flex-row"
+        className="space-y-4 rounded-3xl border border-[color:var(--app-border)] bg-white/80 p-4 shadow-sm"
       >
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Ejemplo: salud, educacion, seguridad"
-          className="flex-1 rounded-2xl border border-[color:var(--app-border)] bg-white/70 px-4 py-3 text-sm text-[var(--app-ink)] shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-full bg-[color:var(--app-accent-strong)] px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(208,95,47,0.35)] transition hover:-translate-y-0.5 hover:bg-[color:var(--app-accent)] disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          {loading ? 'Buscando...' : 'Buscar'}
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Ejemplo: salud, educacion, seguridad"
+            className="flex-1 rounded-2xl border border-[color:var(--app-border)] bg-white/70 px-4 py-3 text-sm text-[var(--app-ink)] shadow-sm outline-none transition focus:border-[color:var(--app-accent-strong)] focus:ring-4 focus:ring-[color:var(--app-ring)]"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-full bg-[color:var(--app-accent-strong)] px-6 py-3 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(208,95,47,0.35)] transition hover:-translate-y-0.5 hover:bg-[color:var(--app-accent)] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {loading ? 'Buscando...' : 'Buscar'}
+          </button>
+        </div>
+
+        {/* Filtro de candidatos */}
+        {candidates.length > 0 && (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowCandidateFilter(!showCandidateFilter)}
+              className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-[var(--app-muted)] transition hover:text-[var(--app-accent-strong)]"
+            >
+              <span>Filtrar por candidato {selectedCandidates.length > 0 && `(${selectedCandidates.length})`}</span>
+              <span className="text-base">{showCandidateFilter ? '−' : '+'}</span>
+            </button>
+            {showCandidateFilter && (
+              <div className="flex flex-wrap gap-2">
+                {candidates.map((candidate) => {
+                  const isSelected = selectedCandidates.includes(candidate.id)
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      onClick={() => toggleCandidate(candidate.id)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        isSelected
+                          ? 'border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent-strong)] text-white'
+                          : 'border-[color:var(--app-border)] bg-white/70 text-[var(--app-muted)] hover:border-[color:var(--app-accent-strong)] hover:text-[var(--app-accent-strong)]'
+                      }`}
+                    >
+                      {candidate.name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </form>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

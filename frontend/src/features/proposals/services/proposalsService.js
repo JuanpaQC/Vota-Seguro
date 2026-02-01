@@ -18,13 +18,16 @@ export async function listProposals({ electionId, candidateId, topic } = {}) {
   return response.data
 }
 
-export async function searchProposals({ electionId, query } = {}) {
+export async function searchProposals({ electionId, query, candidateIds } = {}) {
   const params = {}
   if (electionId) {
     params.electionId = electionId
   }
   if (query) {
     params.q = query
+  }
+  if (candidateIds && candidateIds.length > 0) {
+    params.candidateIds = candidateIds.join(',')
   }
 
   const response = await apiClient.get('/proposals/search', {

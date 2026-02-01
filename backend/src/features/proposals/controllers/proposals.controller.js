@@ -35,9 +35,20 @@ export const listProposalsHandler = asyncHandler(async (req, res) => {
 export const searchProposalsHandler = asyncHandler(async (req, res) => {
   const rawQuery = (req.query.q ?? req.query.query ?? '').toString().trim()
   const electionId = req.query.electionId
+  const candidateIdsParam = req.query.candidateIds
 
   if (!rawQuery) {
     return res.json({ results: [] })
+  }
+
+  // Parse candidateIds from query parameter (can be comma-separated string or array)
+  let selectedCandidateIds = []
+  if (candidateIdsParam) {
+    if (Array.isArray(candidateIdsParam)) {
+      selectedCandidateIds = candidateIdsParam
+    } else if (typeof candidateIdsParam === 'string') {
+      selectedCandidateIds = candidateIdsParam.split(',').map(id => id.trim()).filter(Boolean)
+    }
   }
 
   const tokens = normalize(rawQuery).split(/\s+/).filter(Boolean)
@@ -55,7 +66,16 @@ export const searchProposalsHandler = asyncHandler(async (req, res) => {
         proposal.type,
       ].join(' ')
     )
-    return tokens.every((token) => haystack.includes(token))
+    const matchesQuery = tokens.every((token) => haystack.includes(token))
+    
+    // Filter by candidate if candidateIds are provided
+    if (selectedCandidateIds.length > 0) {
+      const proposalCandidateId = extractId(proposal.candidateId)
+      const matchesCandidate = selectedCandidateIds.includes(proposalCandidateId)
+      return matchesQuery && matchesCandidate
+    }
+    
+    return matchesQuery
   })
 
   const candidateIds = [
