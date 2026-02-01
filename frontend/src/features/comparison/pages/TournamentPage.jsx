@@ -6,35 +6,24 @@ import {
   getElectionTopics,
 } from '../../../services/comparison.service'
 
-function nextPowerOfTwo(value) {
-  if (value <= 1) return 1
-  let result = 1
-  while (result < value) {
-    result *= 2
-  }
-  return result
-}
-
 function buildRounds(candidateIds, decisions) {
-  if (!candidateIds.length) return []
-  const size = nextPowerOfTwo(candidateIds.length)
-  const slots = [...candidateIds, ...Array(size - candidateIds.length).fill(null)]
+  if (candidateIds.length < 2) return []
   const rounds = []
-  let currentSlots = slots
+  let currentSlots = [...candidateIds]
   let roundIndex = 0
 
   while (currentSlots.length > 1) {
     const matches = []
+    const nextSlots = []
+
     for (let i = 0; i < currentSlots.length; i += 2) {
       const a = currentSlots[i]
-      const b = currentSlots[i + 1]
+      const b = i + 1 < currentSlots.length ? currentSlots[i + 1] : null
       const key = `${roundIndex}-${i / 2}`
       let winner = null
 
       if (a && !b) {
         winner = a
-      } else if (b && !a) {
-        winner = b
       } else if (a && b) {
         const decided = decisions[key]
         if (decided === a || decided === b) {
@@ -43,10 +32,11 @@ function buildRounds(candidateIds, decisions) {
       }
 
       matches.push({ key, a, b, winner })
+      nextSlots.push(winner)
     }
 
     rounds.push(matches)
-    currentSlots = matches.map((match) => match.winner)
+    currentSlots = nextSlots
     roundIndex += 1
   }
 
@@ -71,6 +61,7 @@ function TournamentPage() {
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(null)
   const [dragOver, setDragOver] = useState(null)
+  const [championDragOver, setChampionDragOver] = useState(false)
 
   const currentTopic = useMemo(() => {
     if (!topicValue) return null
@@ -98,6 +89,17 @@ function TournamentPage() {
     () => buildRounds(tournamentIds, decisions),
     [tournamentIds, decisions]
   )
+  const finalRoundIndex = rounds.length - 1
+  const championDecisionKey =
+    finalRoundIndex >= 0 ? `${finalRoundIndex}-0` : null
+  const championId = championDecisionKey ? decisions[championDecisionKey] : null
+  const championCandidate = championId ? candidateById.get(championId) : null
+  const canDropChampion =
+    Boolean(dragging) &&
+    finalRoundIndex >= 0 &&
+    dragging.fromRound === finalRoundIndex &&
+    dragging.fromMatch === 0
+  const isChampionActiveDrop = canDropChampion && championDragOver
 
   const slotHeight = 72
   const slotGap = 12
@@ -206,6 +208,9 @@ function TournamentPage() {
     setTournamentIds([])
     setDecisions({})
     setComparison(null)
+    setDragging(null)
+    setDragOver(null)
+    setChampionDragOver(false)
   }
 
   function chooseWinner(roundIndex, matchIndex, candidateId) {
@@ -228,6 +233,7 @@ function TournamentPage() {
   function handleDragEnd() {
     setDragging(null)
     setDragOver(null)
+    setChampionDragOver(false)
   }
 
   function handleDrop(targetRound, targetMatch, slotIndex, event) {
@@ -245,14 +251,35 @@ function TournamentPage() {
     setDragging(null)
   }
 
+  function handleChampionDrop(event) {
+    event?.preventDefault?.()
+    if (!dragging || finalRoundIndex < 0) return
+
+    if (dragging.fromRound === finalRoundIndex && dragging.fromMatch === 0) {
+      chooseWinner(finalRoundIndex, 0, dragging.candidateId)
+    }
+    setChampionDragOver(false)
+    setDragging(null)
+  }
+
   function renderSlot(candidateId, roundIndex, matchIndex, slotIndex, isWinner) {
     const isDropSlot = roundIndex > 0
     const dropKey = `${roundIndex}-${matchIndex}-${slotIndex}`
     const source = isDropSlot
       ? getSourceForSlot(roundIndex, matchIndex, slotIndex)
       : null
+    const previousRound = isDropSlot ? rounds[roundIndex - 1] || [] : []
+    const sourceMatch = source ? previousRound[source.fromMatch] : null
+    const hasValidSource = Boolean(sourceMatch)
+    const decisionKey = `${roundIndex}-${matchIndex}`
+    const decidedWinner = decisions[decisionKey]
+    const isDecided = Boolean(decidedWinner)
+    const isDiscarded =
+      Boolean(candidateId) && isDecided && decidedWinner !== candidateId
+    const isDraggable = Boolean(candidateId) && !isDiscarded
     const isDropAllowed =
       isDropSlot &&
+      hasValidSource &&
       dragging &&
       dragging.fromRound === source.fromRound &&
       dragging.fromMatch === source.fromMatch
@@ -265,11 +292,16 @@ function TournamentPage() {
     let wrapperStyle =
       'border-[color:var(--app-border)] bg-white/90'
     if (isDropSlot && !candidateId) {
-      wrapperStyle = 'border-dashed border-[color:var(--app-border)] bg-white/70'
+      wrapperStyle = hasValidSource
+        ? 'border-dashed border-[color:var(--app-border)] bg-white/70'
+        : 'border-[color:var(--app-border)] bg-slate-100/60'
     }
     if (isActiveDrop) {
       wrapperStyle =
         'border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent)]/10'
+    }
+    if (isDiscarded) {
+      wrapperStyle = 'border-red-200 bg-red-50/80'
     }
 
     const tooltipLines =
@@ -326,14 +358,20 @@ function TournamentPage() {
         {candidateId ? (
           <button
             type="button"
-            draggable
-            onDragStart={(event) =>
+            draggable={isDraggable}
+            disabled={!isDraggable}
+            onDragStart={(event) => {
+              if (!isDraggable) return
               handleDragStart(candidateId, roundIndex, matchIndex, event)
-            }
+            }}
             onDragEnd={handleDragEnd}
-            onClick={() => chooseWinner(roundIndex, matchIndex, candidateId)}
-            className="flex w-full items-start gap-3 text-left"
-            title="Arrastra para avanzar o haz click para elegir."
+            className={[
+              'flex w-full items-start gap-3 text-left',
+              isDraggable
+                ? 'cursor-grab active:cursor-grabbing'
+                : 'cursor-not-allowed opacity-70',
+            ].join(' ')}
+            title="Arrastra para avanzar."
           >
             <div className="mt-1 h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[color:var(--app-border)] bg-[var(--app-bg)]">
               {candidate?.photoUrl ? (
@@ -364,7 +402,7 @@ function TournamentPage() {
                   </span>
                 ) : (
                   <span className="text-[10px] font-semibold text-[var(--app-muted)]">
-                    Elegir
+                    {isDiscarded ? 'Descartado' : 'Arrastra'}
                   </span>
                 )}
               </div>
@@ -372,9 +410,19 @@ function TournamentPage() {
           </button>
         ) : (
           <div className="flex h-full items-center justify-center text-xs text-[var(--app-muted)]">
-            {roundIndex === 0 ? 'Sin rival' : 'Arrastra aqui'}
+            {roundIndex === 0
+              ? 'Sin rival'
+              : hasValidSource
+              ? 'Arrastra aqui'
+              : 'Pase automatico'}
           </div>
         )}
+
+        {isDiscarded ? (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-red-500/75 text-[10px] font-semibold uppercase tracking-[0.25em] text-white">
+            Descartado
+          </div>
+        ) : null}
 
         {candidateId ? (
           <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-64 -translate-x-1/2 rounded-2xl border border-[color:var(--app-border)] bg-white p-3 text-xs text-[var(--app-ink)] opacity-0 shadow-lg transition group-hover:opacity-100 group-focus-within:opacity-100">
@@ -591,7 +639,7 @@ function TournamentPage() {
               Llave del torneo
             </h2>
             <span className="text-xs text-[var(--app-muted)]">
-              Arrastra al candidato a la celda siguiente o haz click para elegir.
+              Arrastra al candidato a la celda siguiente para elegir.
             </span>
           </div>
           <div className="overflow-x-auto">
@@ -658,6 +706,72 @@ function TournamentPage() {
                   })}
                 </div>
               ))}
+              <div className="space-y-5">
+                <div className="text-xs uppercase tracking-[0.3em] text-[var(--app-muted)]">
+                  Campeon
+                </div>
+                <div
+                  className={[
+                    'group relative rounded-2xl border px-3 py-2 transition',
+                    isChampionActiveDrop
+                      ? 'border-[color:var(--app-accent-strong)] bg-[color:var(--app-accent)]/10'
+                      : championCandidate
+                      ? 'border-[color:var(--app-border)] bg-white/90'
+                      : 'border-dashed border-[color:var(--app-border)] bg-white/70',
+                  ].join(' ')}
+                  style={{ minHeight: `${slotHeight}px` }}
+                  onDragOver={
+                    canDropChampion
+                      ? (event) => {
+                          event.preventDefault()
+                          setChampionDragOver(true)
+                        }
+                      : undefined
+                  }
+                  onDragLeave={
+                    canDropChampion ? () => setChampionDragOver(false) : undefined
+                  }
+                  onDrop={canDropChampion ? handleChampionDrop : undefined}
+                >
+                  {championCandidate ? (
+                    <div className="flex w-full items-start gap-3 text-left">
+                      <div className="mt-1 h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[color:var(--app-border)] bg-[var(--app-bg)]">
+                        {championCandidate.photoUrl ? (
+                          <img
+                            src={championCandidate.photoUrl}
+                            alt={championCandidate?.name ?? 'Candidato'}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[10px] text-[var(--app-muted)]">
+                            Sin foto
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--app-ink)]">
+                              {championCandidate?.name ?? championId}
+                            </p>
+                            <p className="text-xs text-[var(--app-muted)]">
+                              {championCandidate?.party ??
+                                'Partido no disponible'}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-[color:var(--app-accent-strong)] px-2 py-0.5 text-[10px] font-semibold text-white">
+                            Campeon
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-[var(--app-muted)]">
+                      Arrastra aqui
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>
