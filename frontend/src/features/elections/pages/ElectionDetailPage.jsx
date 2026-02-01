@@ -4,6 +4,29 @@ import { listCandidates } from '../../candidates/services/candidatesService.js'
 import { getElection } from '../services/electionsService.js'
 import CandidateCard from '../../candidates/components/CandidateCard.jsx'
 
+const FAQ_ITEMS = [
+  {
+    question: 'Como comparo candidaturas?',
+    answer:
+      'Usa el boton "Comparar candidaturas" en la parte superior de la eleccion para verlas lado a lado.',
+  },
+  {
+    question: 'Donde veo propuestas y plan de gobierno?',
+    answer:
+      'Entra al perfil del candidato y revisa las pestanas "Plan de gobierno" y "Propuestas".',
+  },
+  {
+    question: 'Como busco propuestas por tema?',
+    answer:
+      'Selecciona "Buscar propuestas" y filtra por tema o palabras clave para encontrar ideas especificas.',
+  },
+  {
+    question: 'Como comparto un candidato o propuesta?',
+    answer:
+      'Dentro del perfil o el detalle de la propuesta hay botones para compartir en redes sociales.',
+  },
+]
+
 function ElectionDetailPage() {
   const { id } = useParams()
   const [election, setElection] = useState(null)
@@ -163,6 +186,30 @@ function ElectionDetailPage() {
                 Aun no hay candidaturas registradas para esta eleccion.
               </div>
           )}
+        </section>
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-[var(--app-ink)]">
+              Preguntas frecuentes del proceso
+            </h2>
+            <p className="text-sm text-[var(--app-muted)]">
+              Respuestas rapidas para entender el proceso y encontrar la informacion clave.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {FAQ_ITEMS.map((item) => (
+              <div
+                key={item.question}
+                className="rounded-2xl border border-[color:var(--app-border)] bg-white/90 p-5 shadow-sm"
+              >
+                <h3 className="text-sm font-semibold text-[var(--app-ink)]">
+                  {item.question}
+                </h3>
+                <p className="mt-2 text-sm text-[var(--app-muted)]">{item.answer}</p>
+              </div>
+            ))}
+          </div>
         </section>
       </section>
   )

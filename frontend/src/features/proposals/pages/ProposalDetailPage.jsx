@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getCandidate } from '../../candidates/services/candidatesService.js'
 import { getProposal } from '../services/proposalsService.js'
+import SharePanel from '../../../components/SharePanel.jsx'
 
 function ProposalDetailPage() {
   const { electionId, proposalId } = useParams()
@@ -73,6 +74,8 @@ function ProposalDetailPage() {
   }
 
   const topic = proposal.topic || proposal.type || 'Tema sin definir'
+  const proposalTitle = proposal.title || 'Propuesta'
+  const candidateName = candidate?.name || 'este candidato'
 
   return (
     <section className="mx-auto max-w-4xl space-y-6">
@@ -88,10 +91,17 @@ function ProposalDetailPage() {
             {topic}
           </p>
           <h1 className="text-3xl font-[var(--font-display)] text-[var(--app-ink)]">
-            {proposal.title || 'Propuesta'}
+            {proposalTitle}
           </h1>
         </div>
       </header>
+
+      <SharePanel
+        title={proposalTitle}
+        text={`Mira la propuesta ${proposalTitle} de ${candidateName}.`}
+        description="Comparte esta propuesta en tus redes sociales."
+        label="Compartir propuesta"
+      />
 
       <section className="rounded-3xl border border-[color:var(--app-border)] bg-white/90 p-6 shadow-sm">
         <div className="flex flex-wrap items-center gap-4">

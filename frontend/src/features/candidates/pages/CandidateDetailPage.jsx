@@ -4,6 +4,7 @@ import { getCandidate } from '../services/candidatesService.js'
 import { listProposals } from '../../proposals/services/proposalsService.js'
 import { listInterviews } from '../../interviews/services/interviewsService.js'
 import { getElection } from '../../elections/services/electionsService.js'
+import SharePanel from '../../../components/SharePanel.jsx'
 
 function CandidateDetailPage() {
   const { electionId, candidateId } = useParams()
@@ -147,6 +148,15 @@ function CandidateDetailPage() {
           </div>
         </div>
       </div>
+
+      <SharePanel
+        title={candidate.name}
+        text={`Conoce el perfil de ${candidate.name} en ${
+          election?.name || 'la eleccion'
+        }.`}
+        description="Comparte este perfil para que mas personas conozcan al candidato."
+        label="Compartir candidato"
+      />
 
       {/* Tabs Navigation */}
       <div className="flex gap-2 overflow-x-auto rounded-2xl border border-[color:var(--app-border)] bg-white/80 p-2">
