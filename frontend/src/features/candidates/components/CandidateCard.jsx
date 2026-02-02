@@ -56,8 +56,12 @@ function CandidateCard({ candidate, electionId }) {
               <span>Ver perfil completo</span>
               <span className="transition group-hover:translate-x-1">→</span>
             </div>
+            {/* Botón reportar (sin navegar)
 
-            {/* Botón reportar (sin navegar) */}
+             El botón “Reportar” está dentro de un componente <Link>.
+             Para evitar que el clic dispare la navegación, se usan:
+             preventDefault y stopPropagation, permitiendo que solo se
+             ejecute la acción del botón y se abra el modal.*/}
             <button
                 type="button"
                 className="rounded-full border border-[color:var(--app-border)] bg-white px-4 py-2 text-xs font-semibold text-[var(--app-ink)] transition hover:border-[color:var(--app-accent)] hover:text-[var(--app-accent-strong)]"
