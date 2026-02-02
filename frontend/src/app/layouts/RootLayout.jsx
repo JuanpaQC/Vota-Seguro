@@ -1,4 +1,7 @@
 import { Link, Outlet } from 'react-router-dom'
+import ZoomControl from '../../components/accessibility/ZoomControl.jsx'
+import TextToSpeechControl from '../../components/accessibility/TextToSpeechControl.jsx'
+import ReadSelectedTextButton from '../../components/accessibility/ReadSelectedTextButton.jsx'
 
 function RootLayout() {
   return (
@@ -22,6 +25,9 @@ function RootLayout() {
       <main className="mx-auto w-full max-w-6xl px-6 py-8">
         <Outlet />
       </main>
+      <ZoomControl />
+      <TextToSpeechControl />
+      <ReadSelectedTextButton />
     </div>
   )
 }
